@@ -1,6 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import Http404, JsonResponse
@@ -142,6 +142,14 @@ def encomienda_cambiar_estado(request, pk):
         )
     except ValueError as exc:
         messages.error(request, str(exc))
+    except ValidationError as exc:
+        if hasattr(exc, 'message_dict'):
+            errores = []
+            for mensajes in exc.message_dict.values():
+                errores.extend(mensajes)
+            messages.error(request, ' '.join(errores))
+        else:
+            messages.error(request, ' '.join(exc.messages))
 
     return redirect('encomienda_detalle', pk=pk)
 

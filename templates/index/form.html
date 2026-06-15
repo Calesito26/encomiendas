@@ -23,15 +23,12 @@
       </div>
       {% endif %}
 
+      <div class="alert alert-info">
+        El codigo de encomienda se generara automaticamente al guardar.
+      </div>
+
       <div class="row mb-3">
-        <div class="col-md-4">
-          <label class="form-label">{{ form.codigo.label }} *</label>
-          {{ form.codigo }}
-          {% if form.codigo.errors %}
-          <div class="invalid-feedback d-block">{{ form.codigo.errors|join:", " }}</div>
-          {% endif %}
-        </div>
-        <div class="col-md-8">
+        <div class="col-md-12">
           <label class="form-label">{{ form.descripcion.label }} *</label>
           {{ form.descripcion }}
           {% if form.descripcion.errors %}
