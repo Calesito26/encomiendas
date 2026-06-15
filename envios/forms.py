@@ -11,7 +11,6 @@ class EncomiendaForm(forms.ModelForm):
     class Meta:
         model = Encomienda
         fields = [
-            'codigo',
             'descripcion',
             'peso_kg',
             'volumen_cm3',
@@ -23,7 +22,6 @@ class EncomiendaForm(forms.ModelForm):
             'observaciones',
         ]
         widgets = {
-            'codigo': forms.TextInput(attrs={'class': 'form-control'}),
             'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'peso_kg': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0.01'}),
             'volumen_cm3': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
@@ -35,7 +33,6 @@ class EncomiendaForm(forms.ModelForm):
             'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
         labels = {
-            'codigo': 'Codigo de encomienda',
             'peso_kg': 'Peso (kg)',
             'volumen_cm3': 'Volumen (cm3)',
             'fecha_entrega_est': 'Fecha estimada de entrega',

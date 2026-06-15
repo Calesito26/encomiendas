@@ -1,6 +1,5 @@
 from datetime import timedelta
 from decimal import Decimal
-import uuid
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -46,6 +45,7 @@ class Encomienda(models.Model):
     codigo = models.CharField(
         max_length=20,
         unique=True,
+        blank=True,
         validators=[validar_codigo_encomienda]
     )
 
@@ -119,13 +119,17 @@ class Encomienda(models.Model):
                     'El remitente y destinatario no pueden ser el mismo.'
                 )
 
-        if self.fecha_entrega_est:
+        if self.fecha_entrega_est and self._fecha_estimada_fue_modificada():
             if self.fecha_entrega_est < timezone.now().date():
                 errors['fecha_entrega_est'] = ValidationError(
                     'La fecha estimada no puede ser en el pasado.'
                 )
 
-        if self.fecha_entrega_est and self.fecha_entrega_real:
+        if (
+            self.fecha_entrega_est
+            and self.fecha_entrega_real
+            and self._fechas_entrega_fueron_modificadas()
+        ):
             if self.fecha_entrega_real < self.fecha_entrega_est:
                 errors['fecha_entrega_real'] = ValidationError(
                     'La fecha real no puede ser menor a la estimada.'
@@ -135,8 +139,41 @@ class Encomienda(models.Model):
             raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
+        if not self.codigo:
+            self.codigo = self.generar_codigo()
+            
         self.full_clean()
         super().save(*args, **kwargs)
+
+    def _fecha_estimada_fue_modificada(self):
+        if self._state.adding or not self.pk:
+            return True
+
+        try:
+            fecha_original = type(self).objects.only('fecha_entrega_est').get(
+                pk=self.pk
+            ).fecha_entrega_est
+        except type(self).DoesNotExist:
+            return True
+
+        return fecha_original != self.fecha_entrega_est
+
+    def _fechas_entrega_fueron_modificadas(self):
+        if self._state.adding or not self.pk:
+            return True
+
+        try:
+            original = type(self).objects.only(
+                'fecha_entrega_est',
+                'fecha_entrega_real',
+            ).get(pk=self.pk)
+        except type(self).DoesNotExist:
+            return True
+
+        return (
+            original.fecha_entrega_est != self.fecha_entrega_est
+            or original.fecha_entrega_real != self.fecha_entrega_real
+        )
 
     def __str__(self):
         return f'{self.codigo} [{self.get_estado_display()}]'
@@ -210,6 +247,15 @@ class Encomienda(models.Model):
             costo += (self.peso_kg - peso_base) * precio_por_kg_extra
 
         return round(costo, 2)
+    
+    @classmethod
+    def generar_codigo(cls):
+        mayor = 0
+        for encomienda in cls.objects.filter(codigo__startswith='ENC-'):
+            numero = encomienda.codigo.replace('ENC-','')
+            if numero.isdigit():
+                mayor = max(mayor, int(numero))
+        return f'ENC-{mayor + 1:06d}'
 
     @classmethod
     def crear_con_costo_calculado(
@@ -226,11 +272,9 @@ class Encomienda(models.Model):
         Fabrica: crea una encomienda calculando el costo automaticamente.
         El llamador no necesita saber la formula de precio.
         """
-        codigo = f'ENC-{timezone.now().strftime("%Y%m%d")}-{str(uuid.uuid4())[:6].upper()}'
         fecha_est = timezone.now().date() + timedelta(days=ruta.dias_entrega)
 
         encomienda = cls(
-            codigo=codigo,
             descripcion=descripcion,
             peso_kg=peso_kg,
             remitente=remitente,
